@@ -1044,7 +1044,7 @@ def vocab_count(text):
     return str(len(text.split(",")))
 
 
-def vocab_extend(project_name, symbols, model_type):
+def vocab_extend(project_name, symbols, model_type, lang):
     if symbols == "":
         return "Symbols empty!"
 
@@ -1086,7 +1086,10 @@ def vocab_extend(project_name, symbols, model_type):
         f.write("\n".join(vocab))
 
     if model_type == "F5-TTS":
-        ckpt_path = str(cached_path("hf://SWivid/F5-TTS/F5TTS_Base/model_1200000.pt"))
+        if lang == "es":
+            ckpt_path = str(cached_path("hf://anhnct/f5_tts_spainish/model_spain.pt"))
+        else:
+            ckpt_path = str(cached_path("hf://SWivid/F5-TTS/F5TTS_Base/model_1200000.pt"))
     else:
         ckpt_path = str(cached_path("hf://SWivid/E2-TTS/E2TTS_Base/model_1200000.pt"))
 
@@ -1374,16 +1377,10 @@ def get_audio_select(file_sample):
 with gr.Blocks() as app:
     gr.Markdown(
         """
-# E2/F5 TTS Automatic Finetune
+# F5 TTS Automatic Finetune
 
 This is a local web UI for F5 TTS with advanced batch processing support. This app supports the following TTS models:
 
-* [F5-TTS](https://arxiv.org/abs/2410.06885) (A Fairytaler that Fakes Fluent and Faithful Speech with Flow Matching)
-* [E2 TTS](https://arxiv.org/abs/2406.18009) (Embarrassingly Easy Fully Non-Autoregressive Zero-Shot TTS)
-
-The checkpoints support English and Chinese.
-
-For tutorial and updates check here (https://github.com/SWivid/F5-TTS/discussions/143)
 """
     )
 
@@ -1424,7 +1421,7 @@ Skip this step if you have your dataset, metadata.csv, and a folder wavs with al
             )
 
             audio_speaker = gr.File(label="Voice", type="filepath", file_count="multiple")
-            txt_lang = gr.Text(label="Language", value="English")
+            txt_lang = gr.Dropdown(label="Language", choices=["en", "es"], value="en")
             bt_transcribe = bt_create = gr.Button("Transcribe")
             txt_info_transcribe = gr.Text(label="Info", value="")
             bt_transcribe.click(
@@ -1458,7 +1455,8 @@ Check the vocabulary for fine-tuning Emilia_ZH_EN to ensure all symbols are incl
 Using the extended model, you can finetune to a new language that is missing symbols in the vocab. This creates a new model with a new vocabulary size and saves it in your ckpts/project folder.
 ```""")
 
-            exp_name_extend = gr.Radio(label="Model", choices=["F5-TTS", "E2-TTS"], value="F5-TTS")
+            exp_name_extend = gr.Radio(label="Model", choices=["F5-TTS"], value="F5-TTS")
+            lang = gr.Dropdown(label="Language", choices=["en", "es"], value="en")
 
             with gr.Row():
                 txt_extend = gr.Textbox(
@@ -1475,7 +1473,7 @@ Using the extended model, you can finetune to a new language that is missing sym
             txt_extend.change(vocab_count, inputs=[txt_extend], outputs=[txt_count_symbol])
             check_button.click(fn=vocab_check, inputs=[cm_project], outputs=[txt_info_check, txt_extend])
             extend_button.click(
-                fn=vocab_extend, inputs=[cm_project, txt_extend, exp_name_extend], outputs=[txt_info_extend]
+                fn=vocab_extend, inputs=[cm_project, txt_extend, exp_name_extend, lang], outputs=[txt_info_extend]
             )
 
         with gr.TabItem("Prepare Data"):
@@ -1543,7 +1541,7 @@ If you encounter a memory error, try reducing the batch size per GPU to a smalle
                 file_checkpoint_train = gr.Textbox(label="Path to the Pretrained Checkpoint", value="")
 
             with gr.Row():
-                exp_name = gr.Radio(label="Model", choices=["F5TTS_Base", "E2TTS_Base"], value="F5TTS_Base")
+                exp_name = gr.Radio(label="Model", choices=["F5TTS_Base"], value="F5TTS_Base")
                 learning_rate = gr.Number(label="Learning Rate", value=1e-5, step=1e-5)
 
             with gr.Row():
@@ -1741,7 +1739,7 @@ If you encounter a memory error, try reducing the batch size per GPU to a smalle
             gr.Markdown("""```plaintext 
 SOS: Check the use_ema setting (True or False) for your model to see what works best for you. use seed -1 from random
 ```""")
-            exp_name = gr.Radio(label="Model", choices=["F5-TTS", "E2-TTS"], value="F5-TTS")
+            exp_name = gr.Radio(label="Model", choices=["F5-TTS"], value="F5-TTS")
             list_checkpoints, checkpoint_select = get_checkpoints_project(projects_selelect, False)
 
             with gr.Row():
